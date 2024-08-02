@@ -1,0 +1,9 @@
+/projetIRMStack   
+/App/logiciel/trainedModel/*
+/App/unetr/pretrained_models/*
+.env
+*.dcm
+./Orthanc/orthanc_db/*
+/Orthanc/orthanc_db/*
+/BDD/mesures.db
+unetr/pretrained_models/*
