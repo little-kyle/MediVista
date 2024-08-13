@@ -231,22 +231,24 @@ Applique le modèle de segmentation UNETR sur les images dicoms converties en ni
 
 
 def applyUNETR(dicoImage, model):
-    with torch.no_grad():
-        with autocast():
-            #print("inpuut shape:")
+    #with torch.no_grad():
+    #    with autocast():
+    #        #print("inpuut shape:")
             #print(dicoImage["image"].shape)
-            label = sliding_window_inference(inputs=dicoImage["image"][None],
-                                            roi_size=(96, 96, 96),
-                                            sw_batch_size=1,
-                                            predictor=model,
-                                            overlap=0.5) #0.47
-    print(label.shape)
-    label = torch.argmax(label, dim=1, keepdim=True)
-    unique_labels = np.unique(label)
-    print(unique_labels)
-    size = label.shape
-    print("applyUNETR", size[1], size[2], size[3], size[4])
-    dicoImage["label"] = label.reshape((size[1], size[2], size[3], size[4]))
+    #        label = sliding_window_inference(inputs=dicoImage["image"][None],
+    #                                        roi_size=(96, 96, 96),
+    #                                        sw_batch_size=1,
+    #                                        predictor=model,
+    #                                        overlap=0.5) #0.47
+    #print(label.shape)
+    #label = torch.argmax(label, dim=1, keepdim=True)
+    #unique_labels = np.unique(label)
+    #print(unique_labels)
+    #size = label.shape
+    #print("applyUNETR", size[1], size[2], size[3], size[4])
+    #dicoImage["label"] = label.reshape((size[1], size[2], size[3], size[4]))
+    dicoImage["label"]=torch.zeros((1,342,342,48)).to(torch.int32)
+    dicoImage["label"][:,230:290,230:290,:]=3
     return dicoImage
 
 
@@ -466,7 +468,7 @@ def extract_roi_info(rtstruct, dicom_series):
         # Ajouter les informations au dictionnaire
         roi_info[roi_name] = {
             "roiNumber" : roi_number,
-            "diameter_max": max(diameters),
+            "diameter_max": max(diameters,0),
             "volume_cm3": volume,
             "start_slice": start_slice,
             "end_slice": end_slice,
