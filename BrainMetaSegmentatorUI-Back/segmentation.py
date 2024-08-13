@@ -437,6 +437,10 @@ def extract_roi_info(rtstruct, dicom_series):
                     contour_slice_indices.append(slice_positions[z_pos])
         
         diameters = [calculate_diameter(contour) for contour in contours]
+        if diameters:
+            diameter_max = max(diameters)
+        else:
+            diameter_max = 0  # 或者你可以选择其他合适的默认值或处理方式
         nb_dicoms = len(dicom_series)
         
         # Obtenir les slices de début et de fin
@@ -446,7 +450,7 @@ def extract_roi_info(rtstruct, dicom_series):
         # Ajouter les informations au dictionnaire
         roi_info[roi_name] = {
             "roiNumber" : roi_number,
-            "diameter_max": max(diameters),
+            "diameter_max": diameter_max,#max(diameters),
             "volume_cm3": volume,
             "start_slice": start_slice,
             "end_slice": end_slice,

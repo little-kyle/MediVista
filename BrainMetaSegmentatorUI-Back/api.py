@@ -378,6 +378,47 @@ def inputdata_to_binary(dicom_data, rtstruct_data):
     return files
 
 
+@app.route('/segmentation_unetr/<study_instance_uid>', methods=['POST'])
+def segmentation_unetr(study_instance_uid):
+    # Convertir StudyInstanceUID en ID Orthanc
+    orthanc_study_id = find_orthanc_id_by_sop_instance_uid(study_instance_uid)
+    if not orthanc_study_id:
+        return jsonify({"error": "StudyInstanceUID not found"}), 404
+
+    try:
+        dicom_data, rtstruct_data, rtstruct_id = download_and_process_dicoms(orthanc_study_id)
+        #print(len(dicom_data))
+        #-----filedataset to binary-------------
+        files=inputdata_to_binary(dicom_data, rtstruct_data)
+
+        url=f"{UNETR_URL}/segmentation_unetr"
+        response = requests.post(url, files=files)
+
+        isFromCurrentRTStruct=False
+        rtstruct=None
+        if response.status_code == 200:
+            rtstruct = response.content
+            isFromCurrentRTStruct = response.headers.get('X-IsFromCurrentRTStruct')
+            
+            print(f"IsFromCurrentRTStruct: {isFromCurrentRTStruct}")
+            #rtstruct = pydicom.dcmread(BytesIO(response.content))
+        else:
+            print(f"Failed to download: {response.status_code}")
+
+        #rtstruct_data = pydicom.dcmread(io.BytesIO(rtstruct.read()))
+        #isFromCurrentRTStruct = pydicom.dcmread(io.BytesIO(isFromCurrentRTStruct.read()))
+
+        if isFromCurrentRTStruct:
+            print("Voici l'id du RTStruct :", rtstruct_id)
+            update_or_upload_rtstruct(dicom_data, rtstruct, rtstruct_id)
+        else:
+            update_or_upload_rtstruct(dicom_data, rtstruct)
+
+        return jsonify({"success": "DICOM files retrieved and processed successfully."}), 200
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+
+
 @app.route('/segmentation/<study_instance_uid>', methods=['POST'])
 def segmentation(study_instance_uid):
     # Convertir StudyInstanceUID en ID Orthanc
@@ -391,7 +432,7 @@ def segmentation(study_instance_uid):
         #-----filedataset to binary-------------
         files=inputdata_to_binary(dicom_data, rtstruct_data)
 
-        url=f"{UNETR_URL}/segmentation_unetr"
+        url=f"{UNETR_URL}/segmentation_stroke"
         response = requests.post(url, files=files)
 
         isFromCurrentRTStruct=False
@@ -489,8 +530,8 @@ def update_or_upload_rtstruct(dicoms, rtstruct, rtstruct_id=None):
     # Convertir les informations du RTStruct
     patient_id = int(rtstruct_infos["PatientID"])  # Convertir en entier
     patient_name = str(rtstruct_infos["PatientName"])
-    #patient_birth_date = convertir_date(rtstruct_infos["PatientBirthDate"])
-    #patient_sex = rtstruct_infos["PatientSex"]
+    patient_birth_date = convertir_date(rtstruct_infos["PatientBirthDate"])
+    patient_sex = rtstruct_infos["PatientSex"]
     study_date = convertir_date(rtstruct_infos["StudyDate"])
     study_instance_uid = rtstruct_infos["StudyInstanceUID"]
 
@@ -501,8 +542,8 @@ def update_or_upload_rtstruct(dicoms, rtstruct, rtstruct_id=None):
     db = get_db()
 
      # Ajout ou mise à jour du patient
-    patient_birth_date='1990-01-01'
-    patient_sex='M'
+    #patient_birth_date='1990-01-01'
+    #patient_sex='M'
     if not db.patient_exists(patient_id):
         db.ajouter_patient(patient_id, patient_name, patient_birth_date, patient_sex)
     
